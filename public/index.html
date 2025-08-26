@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>聚合影视搜索</title>
+	<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+	<header class="site-header">
+		<h1 class="logo">acTV</h1>
+		<p class="subtitle">输入关键词，聚合多个资源站一键搜索</p>
+		<form id="searchForm" class="search-form">
+			<input id="wd" type="search" placeholder="搜索影片、演员、导演..." autocomplete="off" />
+			<button type="submit">搜索</button>
+		</form>
+		<div id="favoritesBar" class="favorites"></div>
+	</header>
+
+	<main>
+		<section class="section">
+			<h3 class="section-title">我的收藏</h3>
+			<section id="favGrid" class="grid"></section>
+		</section>
+		<section id="stats" class="stats"></section>
+		<section id="grid" class="grid"></section>
+	</main>
+
+	<!-- 播放器模态层 -->
+	<div id="playerModal" class="modal hidden">
+		<div class="modal-body">
+			<button class="modal-close" id="closePlayer">×</button>
+			<div class="player-head">
+				<div id="playerTitle" class="player-title">加载中...</div>
+				<button id="favBtn" class="btn-fav">☆ 收藏</button>
+			</div>
+			<div class="player-wrap">
+				<video id="video" controls playsinline></video>
+			</div>
+			<ul id="episodeList" class="episodes"></ul>
+		</div>
+	</div>
+
+	<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7/dist/hls.min.js"></script>
+	<script src="/app.js"></script>
+</body>
+</html> 

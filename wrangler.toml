@@ -1,0 +1,12 @@
+name = "actv-pages"
+compatibility_date = "2024-08-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+LOG_LEVEL = "info"
+
+[site]
+bucket = "public"
+
+[pages]
+# 使用 Pages Functions（/functions 目录） 
