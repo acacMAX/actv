@@ -37,9 +37,18 @@ main { padding: 16px; max-width: 1280px; margin: 0 auto; }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; }
 @media (max-width: 640px) { .grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); } }
-.card { background: #0e1a2a; border: 1px solid #1f2a3a; border-radius: 12px; overflow: hidden; transition: transform .2s ease, box-shadow .2s ease; }
-.card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.35); }
-.card .poster { width: 100%; aspect-ratio: 2/3; object-fit: cover; background: #0b1420; }
+/* 过渡与动效通用 */
+:root { --ease: cubic-bezier(.2,.8,.2,1); }
+.fade-in { animation: fade-in .32s var(--ease); }
+@keyframes fade-in { from { opacity: 0; transform: translateY(4px);} to { opacity: 1; transform: none; } }
+.scale-in { animation: scale-in .18s var(--ease); }
+@keyframes scale-in { from { opacity: 0; transform: scale(.98);} to { opacity: 1; transform: scale(1);} }
+
+/* 卡片动效 */
+.card { background: #0e1a2a; border: 1px solid #1f2a3a; border-radius: 12px; overflow: hidden; transition: transform .2s var(--ease), box-shadow .2s var(--ease), border-color .2s var(--ease); }
+.card:hover { transform: translateY(-4px); box-shadow: 0 10px 28px rgba(0,0,0,0.35); border-color: #293a55; }
+.card .poster { width: 100%; aspect-ratio: 2/3; object-fit: cover; background: linear-gradient(90deg, #0b1420, #0d1a2b, #0b1420); background-size: 200% 100%; animation: shimmer 1.2s linear infinite; }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 .card .meta { padding: 10px; }
 .card .title { font-size: 14px; line-height: 1.35; height: 38px; overflow: hidden; }
 .card .sub { font-size: 12px; color: #9bb0c8; margin-top: 6px; display: flex; justify-content: space-between; }
@@ -51,7 +60,8 @@ main { padding: 16px; max-width: 1280px; margin: 0 auto; }
 /* 播放器模态 */
 .modal { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 1000; backdrop-filter: blur(2px); }
 .modal.hidden { display: none; }
-.modal-body { position: relative; width: min(1100px, 96vw); background: #0e1a2a; border: 1px solid #1f2a3a; border-radius: 12px; padding: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.45); }
+/* 模态动效 */
+.modal-body { position: relative; width: min(1100px, 96vw); background: #0e1a2a; border: 1px solid #1f2a3a; border-radius: 12px; padding: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.45); animation: scale-in .16s var(--ease); }
 .modal-close { position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border: none; border-radius: 6px; background: #17263d; color: #e8eef7; cursor: pointer; z-index: 2; }
 .player-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 44px 10px 4px; }
 .player-title { font-weight: 700; color: #e8eef7; }
@@ -61,6 +71,33 @@ main { padding: 16px; max-width: 1280px; margin: 0 auto; }
 .player-wrap { width: 100%; background: #000; border-radius: 8px; overflow: hidden; }
 .player-wrap video { width: 100%; height: min(62vh, 56vw); background: #000; }
 @media (max-width: 640px) { .player-wrap video { height: 44vh; } }
-.episodes { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; padding: 0; list-style: none; }
+
+/* 剧集列表与分页 */
+.episodes { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; padding: 0; list-style: none; max-height: 32vh; overflow: auto; }
 .episodes li { padding: 8px 10px; background: #13233a; border: 1px solid #1f2a3a; color: #b8c6dc; border-radius: 8px; cursor: pointer; }
-.episodes li.active { background: #3c6ee8; color: #fff; border-color: #3c6ee8; } 
+.episodes li.active { background: #3c6ee8; color: #fff; border-color: #3c6ee8; }
+.ep-pager-li { width: 100%; padding: 0; background: transparent; border: none; }
+.ep-pager { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+.ep-pager.sticky { position: sticky; top: 0; background: #0e1a2a; padding: 6px 4px; z-index: 3; border-bottom: 1px solid #1f2a3a; }
+.ep-pager button { padding: 6px 10px; border-radius: 8px; border: 1px solid #2a3b57; background: #13233a; color: #cbd7ea; cursor: pointer; }
+.ep-pager button:disabled { opacity: .5; cursor: not-allowed; }
+.ep-jump { width: 72px; padding: 6px 8px; border-radius: 8px; border: 1px solid #2a3b57; background: #0e1a2a; color: #e8eef7; }
+.ep-size { padding: 6px 8px; border-radius: 8px; border: 1px solid #2a3b57; background: #0e1a2a; color: #e8eef7; }
+@media (max-width: 640px) {
+	.episodes { gap: 6px; }
+	.episodes li { padding: 7px 8px; font-size: 13px; }
+} 
+/* 按钮细微反馈 */
+.search-form button, .btn-fav, .ep-pager button { transition: transform .12s var(--ease), background .2s var(--ease), box-shadow .2s var(--ease); }
+.search-form button:active, .btn-fav:active, .ep-pager button:active { transform: translateY(1px); }
+
+/* 分页切换时平滑滚动 */
+.episodes { scroll-behavior: smooth; } 
+
+/* 顶部搜索进度条 */
+.top-progress { position: fixed; left: 0; top: 0; width: 100%; height: 3px; background: linear-gradient(90deg, #5b8cff, #7ad2ff); background-size: 200% 100%; animation: progress-move 1s linear infinite; z-index: 2000; box-shadow: 0 0 12px rgba(90,140,255,.6); }
+.top-progress.hidden { display: none; }
+@keyframes progress-move { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* 收藏 chip 删除渐隐 */
+.fav-chip.removing { opacity: 0; transform: scale(.98); transition: opacity .18s var(--ease), transform .18s var(--ease); } 

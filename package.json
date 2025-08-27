@@ -1,5 +1,5 @@
 {
-  "name": "akacc-video-aggregator",
+  "name": "actv",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,6 +10,7 @@
     "start": "node src/server.js",
     "dev": "node src/server.js"
   },
+  "description": "acTV · 聚合影视搜索与播放的轻量聚合站点",
   "dependencies": {
     "axios": "^1.7.2",
     "cors": "^2.8.5",

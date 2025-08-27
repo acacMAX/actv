@@ -8,7 +8,7 @@ const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static('public', { maxAge: '7d', etag: true, cacheControl: true }));
 
 // 简易内存缓存
 const cache = new Map(); // key -> { expireAt, data }
@@ -231,9 +231,9 @@ app.get('/stream', async (req, res) => {
 		const headers = { Referer: new URL(url).origin, 'User-Agent': 'Mozilla/5.0' };
 		const isM3u8Hint = /\.m3u8(\?.*)?$/i.test(url);
 		const head = await axios.get(url, { responseType: 'arraybuffer', timeout: 8000, headers });
-		const contentType = head.headers['content-type'] || '';
+		const contentType = (head.headers['content-type'] || '').toLowerCase();
 		const isHtml = contentType.includes('text/html');
-		const looksM3u8 = contentType.includes('application/vnd.apple.mpegurl') || contentType.includes('application/x-mpegURL') || contentType.includes('vnd.apple.mpegurl') || (isM3u8Hint && contentType.includes('text'));
+		const looksM3u8 = contentType.includes('application/vnd.apple.mpegurl') || contentType.includes('application/x-mpegurl') || contentType.includes('vnd.apple.mpegurl') || contentType.includes('audio/mpegurl') || contentType.includes('application/mpegurl') || contentType.includes('text') || isM3u8Hint;
 		if (looksM3u8) {
 			const text = Buffer.from(head.data).toString('utf8');
 			const base = new URL(url);

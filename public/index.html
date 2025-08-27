@@ -3,15 +3,30 @@
 <head>
 	<meta charset="UTF-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
-	<title>聚合影视搜索</title>
-	<link rel="stylesheet" href="/style.css" />
+	<title>acTV · 聚合影视搜索</title>
+	<meta name="description" content="acTV 是一个轻量的聚合影视搜索站点：一次搜索，跨多个资源站去重整合，即点即播。" />
+	<link rel="stylesheet" href="/style.css?v=2" />
+	<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+	<link rel="mask-icon" href="/favicon.svg" color="#5b8cff" />
+	<meta name="theme-color" content="#5b8cff" />
+	<link rel="manifest" href="/manifest.webmanifest" />
+	<meta property="og:type" content="website" />
+	<meta property="og:title" content="acTV · 聚合影视搜索" />
+	<meta property="og:description" content="一次搜索，跨多个资源站去重整合，即点即播。" />
+	<meta property="og:image" content="/placeholder.svg" />
+	<meta property="og:url" content="/" />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:title" content="acTV · 聚合影视搜索" />
+	<meta name="twitter:description" content="一次搜索，跨多个资源站去重整合，即点即播。" />
+	<meta name="twitter:image" content="/placeholder.svg" />
 </head>
 <body>
+	<div id="topProgress" class="top-progress hidden"></div>
 	<header class="site-header">
 		<h1 class="logo">acTV</h1>
-		<p class="subtitle">输入关键词，聚合多个资源站一键搜索</p>
+		<p class="subtitle">聚合多个资源站，一键搜索、去重整合、即点即播</p>
 		<form id="searchForm" class="search-form">
-			<input id="wd" type="search" placeholder="搜索影片、演员、导演..." autocomplete="off" />
+			<input id="wd" type="search" placeholder="搜索片名、演员或导演，回车开始" autocomplete="off" />
 			<button type="submit">搜索</button>
 		</form>
 		<div id="favoritesBar" class="favorites"></div>
@@ -42,6 +57,6 @@
 	</div>
 
 	<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7/dist/hls.min.js"></script>
-	<script src="/app.js"></script>
+	<script src="/app.js?v=2"></script>
 </body>
 </html> 

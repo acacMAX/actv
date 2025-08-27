@@ -1,0 +1,11 @@
+{
+  "name": "acTV",
+  "short_name": "acTV",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b1420",
+  "theme_color": "#5b8cff",
+  "icons": [
+    { "src": "/favicon.svg", "type": "image/svg+xml", "sizes": "any" }
+  ]
+} 
