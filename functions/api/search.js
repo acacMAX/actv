@@ -19,12 +19,7 @@ export const onRequestGet = async ({ request, env, waitUntil }) => {
 			try {
 				const resp = await fetch(u, { headers: defaultHeaders(u), cf: { cacheTtl: 60 } });
 				const data = await resp.json().catch(() => ({}));
-				let list = [];
-				if (Array.isArray(data)) list = data;
-				else if (Array.isArray(data?.list)) list = data.list;
-				else if (Array.isArray(data?.data)) list = data.data;
-				else if (Array.isArray(data?.result)) list = data.result;
-				else if (Array.isArray(data?.res)) list = data.res;
+				const list = extractList(data);
 				if (list.length) return list.slice(0, 20).map(v => normalizeVodItem(v, source));
 			} catch {}
 		}
@@ -71,21 +66,23 @@ export const onRequestGet = async ({ request, env, waitUntil }) => {
 
 function getSources() {
 	return [
-		{ name: '暴风', base: 'https://publish.bfzy.tv', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
-		{ name: '非凡', base: 'http://ffzy5.tv', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
-		{ name: '快看', base: 'https://kuaikanzy.net', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
-		{ name: '乐视', base: 'https://www.leshizy1.com', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
-		{ name: '量子', base: 'http://lzizy.net', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
-		{ name: '索尼', base: 'https://suonizy.net', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
-		{ name: '红牛', base: 'https://hongniuziyuan.net', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
-		{ name: '优质', base: 'https://1080zyk6.com', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
-		{ name: '鸭鸭', base: 'https://yayazy.com', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
-		{ name: '牛牛', base: 'https://niuniuzy.cc', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
-		{ name: 'OK', base: 'https://okzyw.vip', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
-		{ name: '49', base: 'https://49zyw.com', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
-		{ name: '360', base: 'https://360zy5.com', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
-		{ name: '奇虎', base: 'https://qihuzy4.com', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] }
+		{ name: '天天影视', base: 'https://www.tttv01.com', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
+		{ name: '秒看', base: 'https://miaokan.cc', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
+		{ name: 'HD电影', base: 'https://www.hd-dy.cc', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
+		{ name: '3Q影视', base: 'https://qqqys.com', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
+		{ name: '小红影视', base: 'https://www.xiaohys.com', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] }
 	];
+}
+
+function extractList(data) {
+	if (!data || typeof data !== 'object') return [];
+	if (Array.isArray(data)) return data;
+	const list = data.list ?? data.data ?? data.result ?? data.res ?? data.vod_list ?? data.vodlist ?? data.vod;
+	if (Array.isArray(list)) return list;
+	for (const v of Object.values(data)) {
+		if (Array.isArray(v) && v.length && (v[0]?.vod_name != null || v[0]?.name != null)) return v;
+	}
+	return [];
 }
 
 function normalizeVodItem(item, source) {
@@ -109,7 +106,7 @@ function absolutify(cover, base) {
 
 function defaultHeaders(u) {
 	const o = new URL(u);
-	return { 'User-Agent': 'Mozilla/5.0', 'Referer': o.origin };
+	return { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124 Safari/537.36', 'Referer': o.origin + '/', 'Origin': o.origin };
 }
 
 function wait(ms) { return new Promise(r => setTimeout(r, ms)); }

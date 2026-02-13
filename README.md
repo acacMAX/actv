@@ -41,7 +41,8 @@ curl "http://localhost:3000/api/search?wd=三体&mode=fast"
   - 返回：`{ title, episodes: [{ name, url }], ... }`
 
 ## 配置采集源
-- 源列表在 `src/server.js` 的 `sources` 数组。
+- **本地 / Node 部署**：源列表在 `src/server.js` 的 `sources` 数组。
+- **Cloudflare Pages 部署**：实际运行的是 `functions/` 下的 Pages Functions，源在 `functions/api/search.js` 与 `functions/api/detail.js` 的 `getSources()` 中，修改源或解析逻辑时需两处同步（或先改 `src/server.js` 再同步到 `functions/`）。
 - 如遇站点接口变更，可调整 `patterns`，常见为：
   - `/api.php/provide/vod/?ac=list&wd={wd}`
   - `/index.php/ajax/suggest?mid=1&wd={wd}`
