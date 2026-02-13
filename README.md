@@ -46,4 +46,9 @@ curl "http://localhost:3000/api/search?wd=三体&mode=fast"
   - `/api.php/provide/vod/?ac=list&wd={wd}`
   - `/index.php/ajax/suggest?mid=1&wd={wd}`
 
+### 源失效排查
+- 资源站域名经常更换或下线，若某源不可用属正常现象。
+- 启动时设置 `LOG_LEVEL=debug` 或在搜索时查看控制台：每个失败的源会打印 `source fetch failed` 及原因（如 HTTP 404、超时等）。
+- 可自行替换/新增 `sources` 中的 `base` 为当前可用的苹果 CMS 资源站地址；接口规范参考 [苹果CMS 采集接口](https://www.maccms.plus/api/collect.html)。
+
 仅用于学习与聚合检索演示，请遵守各站点协议与法律法规。

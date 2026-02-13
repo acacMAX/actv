@@ -15,32 +15,23 @@ const cache = new Map(); // key -> { expireAt, data }
 function getCache(key) { const v = cache.get(key); if (v && v.expireAt > Date.now()) return v.data; cache.delete(key); return null; }
 function setCache(key, data, ttlMs = 60_000) { cache.set(key, { expireAt: Date.now() + ttlMs, data }); }
 
-// Utility: HTTP client with timeout and UA
+// Utility: HTTP client with timeout and UA（部分资源站会校验 Referer，在具体请求里按源补充）
 const http = axios.create({
-	// 8s timeout for remote sources
-	timeout: 8000,
+	timeout: 12000,
 	headers: {
 		'User-Agent':
-			'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36'
+			'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36',
+		Accept: 'application/json, text/plain, */*'
 	}
 });
 
-// Source adapters（优先使用 suggest 接口以获取封面）
+// Source adapters（优先 suggest 接口以获取封面；资源站常换域名，失效时请按苹果CMS接口自行替换 base）
 const sources = [
-	{ name: '暴风', base: 'https://publish.bfzy.tv', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
-	{ name: '非凡', base: 'http://ffzy5.tv', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
-	{ name: '快看', base: 'https://kuaikanzy.net', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
-	{ name: '乐视', base: 'https://www.leshizy1.com', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
-	{ name: '量子', base: 'http://lzizy.net', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
-	{ name: '索尼', base: 'https://suonizy.net', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
-	{ name: '红牛', base: 'https://hongniuziyuan.net', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
-	{ name: '优质', base: 'https://1080zyk6.com', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
-	{ name: '鸭鸭', base: 'https://yayazy.com', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
-	{ name: '牛牛', base: 'https://niuniuzy.cc', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
-	{ name: 'OK', base: 'https://okzyw.vip', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
-	{ name: '49', base: 'https://49zyw.com', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
-	{ name: '360', base: 'https://360zy5.com', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
-	{ name: '奇虎', base: 'https://qihuzy4.com', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] }
+	{ name: '天天影视', base: 'https://www.tttv01.com', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
+	{ name: '秒看', base: 'https://miaokan.cc', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
+	{ name: 'HD电影', base: 'https://www.hd-dy.cc', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
+	{ name: '3Q影视', base: 'https://qqqys.com', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] },
+	{ name: '小红影视', base: 'https://www.xiaohys.com', patterns: ['/index.php/ajax/suggest?mid=1&wd={wd}', '/api.php/provide/vod/?ac=list&wd={wd}'] }
 ];
 
 function buildTryUrls(source, wd) {
@@ -70,19 +61,30 @@ function normalizeVodItem(item, source) {
 	return { source: source.name, title, cover, year, type, remarks: item.note || item.vod_remarks || item.remarks || '', id, detailApi, openUrl: searchUrl };
 }
 
+function extractList(data) {
+	if (!data || typeof data !== 'object') return [];
+	if (Array.isArray(data)) return data;
+	const list = data.list ?? data.data ?? data.result ?? data.res ?? data.vod_list ?? data.vodlist ?? data.vod;
+	if (Array.isArray(list)) return list;
+	// 部分站点把列表放在单键对象里
+	for (const v of Object.values(data)) {
+		if (Array.isArray(v) && v.length && (v[0]?.vod_name != null || v[0]?.name != null)) return v;
+	}
+	return [];
+}
+
 async function fetchFromSource(source, wd) {
 	const urls = buildTryUrls(source, wd);
+	const headers = { Referer: source.base + '/', Origin: new URL(source.base).origin };
 	for (const url of urls) {
 		try {
-			const { data } = await http.get(url);
-			let list = [];
-			if (Array.isArray(data)) list = data;
-			else if (Array.isArray(data?.list)) list = data.list;
-			else if (Array.isArray(data?.data)) list = data.data;
-			else if (Array.isArray(data?.result)) list = data.result;
-			else if (Array.isArray(data?.res)) list = data.res;
+			const { data } = await http.get(url, { headers });
+			const list = extractList(data);
 			if (list.length) return list.slice(0, 20).map(v => normalizeVodItem(v, source));
-		} catch {}
+		} catch (err) {
+			const msg = err.response?.status ? `HTTP ${err.response.status}` : err.code || err.message || 'unknown';
+			logger.warn({ source: source.name, url: url.slice(0, 60), err: msg }, 'source fetch failed');
+		}
 	}
 	return [];
 }
@@ -147,11 +149,29 @@ function splitPlayBlocks(str) {
 	return String(str || '').split('$$$').map(s => s.trim()).filter(Boolean);
 }
 
-function parseEpisodesPreferM3u8(item) {
-	const froms = splitPlayBlocks(item.vod_play_from || item.play_from || '');
-	const urlsBlocks = splitPlayBlocks(item.vod_play_url || item.play_url || '');
+function absolutifyPlayUrl(url, baseOrigin) {
+	if (!url || typeof url !== 'string') return '';
+	const u = url.trim();
+	if (/^https?:\/\//i.test(u)) return u;
+	if (/^\/\//.test(u)) return `https:${u}`;
+	try {
+		return new URL(u, baseOrigin).href;
+	} catch {
+		return u.startsWith('/') ? `${baseOrigin}${u}` : `${baseOrigin}/${u}`;
+	}
+}
+
+function parseEpisodesPreferM3u8(item, baseOrigin = '') {
+	const playFrom = item.vod_play_from ?? item.play_from ?? item.play_from_name ?? '';
+	const playUrl = item.vod_play_url ?? item.play_url ?? item.play_url_name ?? '';
+	const froms = splitPlayBlocks(playFrom);
+	const urlsBlocks = splitPlayBlocks(playUrl);
 	// 对齐 from 与 url，以包含 m3u8 的来源优先
-	let pairs = froms.map((f, idx) => ({ from: f.toLowerCase(), raw: urlsBlocks[idx] || '' }));
+	let pairs = froms.map((f, idx) => ({ from: (f || '').toLowerCase(), raw: urlsBlocks[idx] || '' }));
+	if (pairs.every(p => !p.raw) && urlsBlocks.length > 0) {
+		// 仅有 vod_play_url 无 from 时，当作单组
+		pairs = [{ from: '', raw: urlsBlocks[0] || '' }];
+	}
 	pairs.sort((a, b) => {
 		const as = a.from.includes('m3u8') ? 0 : 1;
 		const bs = b.from.includes('m3u8') ? 0 : 1;
@@ -159,8 +179,11 @@ function parseEpisodesPreferM3u8(item) {
 	});
 	for (const p of pairs) {
 		const eps = String(p.raw).split('#').map(x => x.trim()).filter(Boolean).map(seg => {
-			const [name, url] = seg.split('$');
-			return { name: name || '第1集', url: url || '' };
+			const dollarIdx = seg.indexOf('$');
+			const name = dollarIdx >= 0 ? seg.slice(0, dollarIdx).trim() : '第1集';
+			const url = dollarIdx >= 0 ? seg.slice(dollarIdx + 1).trim() : seg;
+			const absUrl = baseOrigin ? absolutifyPlayUrl(url, baseOrigin) : url;
+			return { name: name || '第1集', url: absUrl };
 		}).filter(ep => ep.url);
 		if (eps.length) return eps;
 	}
@@ -169,11 +192,31 @@ function parseEpisodesPreferM3u8(item) {
 
 async function tryExtractM3u8FromPage(pageUrl) {
 	try {
-		const { data } = await axios.get(pageUrl, { timeout: 8000, headers: { Referer: new URL(pageUrl).origin, 'User-Agent': 'Mozilla/5.0' } });
-		if (typeof data !== 'string') return '';
-		const reg = /(https?:[^'"\s]+\.m3u8[^'"\s]*)/ig;
-		const match = reg.exec(data);
-		return match ? match[1] : '';
+		const { data } = await axios.get(pageUrl, {
+			timeout: 8000,
+			headers: {
+				Referer: new URL(pageUrl).origin + '/',
+				'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36'
+			}
+		});
+		const html = typeof data === 'string' ? data : (data && typeof data === 'object' ? JSON.stringify(data) : '');
+		if (!html) return '';
+		// 多种常见 m3u8 出现形式
+		const patterns = [
+			/(?:url|src|link)\s*[:=]\s*["'](https?:[^"']+\.m3u8[^"']*)["']/i,
+			/(?:url|src)\s*[:=]\s*["']([^"']+\.m3u8[^"']*)["']/i,
+			/(https?:[^"'<>\s]+\.m3u8[^"'<>\s]*)/i,
+			/["']([^"']*\.m3u8[^"']*)["']/i
+		];
+		for (const reg of patterns) {
+			const m = reg.exec(html);
+			if (m && m[1]) {
+				let u = m[1].replace(/\\u002f/g, '/').trim();
+				if (!/^https?:\/\//i.test(u)) u = new URL(u, pageUrl).href;
+				return u;
+			}
+		}
+		return '';
 	} catch { return ''; }
 }
 
@@ -184,22 +227,33 @@ app.get('/api/detail', async (req, res) => {
 	const src = findSourceByName(sourceName);
 	if (!src) return res.status(400).json({ code: 400, msg: '未知的来源' });
 	const url = `${src.base}/api.php/provide/vod/?ac=detail&ids=${encodeURIComponent(id)}`;
+	const headers = { Referer: src.base + '/', Origin: new URL(src.base).origin };
 	try {
-		const { data } = await http.get(url);
-		const list = data?.list || data?.data || [];
-		const item = Array.isArray(list) && list.length ? list[0] : null;
+		const { data } = await http.get(url, { headers });
+		// 兼容 list[0]、data[0]、单对象直接返回
+		let list = data?.list ?? data?.data;
+		if (!Array.isArray(list) || list.length === 0) {
+			const single = data?.vod ?? data?.info ?? (data?.vod_id != null || data?.vod_name != null ? data : null);
+			list = single ? [single] : [];
+		}
+		const item = list.length ? list[0] : null;
 		if (!item) return res.json({ code: 0, title: '', episodes: [] });
-		let episodes = parseEpisodesPreferM3u8(item);
+		const baseOrigin = new URL(src.base).origin;
+		let episodes = parseEpisodesPreferM3u8(item, baseOrigin);
+		const fallbackUrls = []; // 非 m3u8 的播放页，供 /stream 再尝试解析
 		for (let i = 0; i < episodes.length; i++) {
 			const ep = episodes[i];
 			if (!/\.m3u8(\?.*)?$/i.test(ep.url)) {
 				const found = await tryExtractM3u8FromPage(ep.url);
-				if (found) ep.url = found; else ep.url = '';
+				if (found) ep.url = found; else { fallbackUrls.push({ name: ep.name, url: ep.url }); ep.url = ''; }
 			}
 		}
-		episodes = episodes.filter(ep => !!ep.url && /\.m3u8(\?.*)?$/i.test(ep.url));
-		res.json({ code: 0, title: item.vod_name || item.name || '', episodes });
+		let finalList = episodes.filter(ep => !!ep.url && /\.m3u8(\?.*)?$/i.test(ep.url));
+		// 若没有解析出任何 m3u8，仍返回播放页链接，前端通过 /stream 打开时可由服务端再尝试从页面提取
+		if (finalList.length === 0 && fallbackUrls.length > 0) finalList = fallbackUrls;
+		res.json({ code: 0, title: item.vod_name || item.name || item.title || '', episodes: finalList });
 	} catch (e) {
+		logger.warn({ err: e.message, source: sourceName, id }, 'detail fetch failed');
 		res.status(500).json({ code: 500, msg: '获取详情失败' });
 	}
 });
@@ -248,11 +302,19 @@ app.get('/stream', async (req, res) => {
 		}
 		if (isHtml) {
 			const html = Buffer.from(head.data).toString('utf8');
-			const reg = /(https?:[^'"\s]+\.m3u8[^'"\s]*)/ig;
-			const m = reg.exec(html);
-			if (m && m[1]) {
-				const abs = new URL(m[1], new URL(url)).toString();
-				return res.redirect(302, `/stream?url=${encodeURIComponent(abs)}`);
+			const patterns = [
+				/(?:url|src|link)\s*[:=]\s*["'](https?:[^"']+\.m3u8[^"']*)["']/i,
+				/(?:url|src)\s*[:=]\s*["']([^"']+\.m3u8[^"']*)["']/i,
+				/(https?:[^"'<>\s]+\.m3u8[^"'<>\s]*)/i,
+				/["']([^"']*\.m3u8[^"']*)["']/i
+			];
+			for (const reg of patterns) {
+				const m = reg.exec(html);
+				if (m && m[1]) {
+					let u = m[1].replace(/\\u002f/g, '/').trim();
+					if (!/^https?:\/\//i.test(u)) u = new URL(u, url).href;
+					return res.redirect(302, `/stream?url=${encodeURIComponent(u)}`);
+				}
 			}
 		}
 		res.setHeader('Cache-Control', 'no-cache');
